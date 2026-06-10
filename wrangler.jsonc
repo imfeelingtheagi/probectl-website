@@ -18,7 +18,7 @@
   // Created with: npx wrangler kv namespace create DOCS_CACHE
   // Paste the generated id here before the first deploy.
   "kv_namespaces": [
-    { "binding": "DOCS_CACHE", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }
+    { "binding": "DOCS_CACHE", "id": "9b6ac29068bc44459e08890a42e84425" }
   ],
 
   // Custom Domains: Cloudflare creates DNS records + certificates on the
