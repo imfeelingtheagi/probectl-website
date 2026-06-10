@@ -239,6 +239,7 @@
       <div class="navlinks" id="navlinks">
         <a href="#signals">Signals</a>
         <a href="#correlate">Correlation</a>
+        <a href="#ai">AI</a>
         <a href="#perimeter">Perimeter</a>
         <a href="#deploy">Deploy</a>
         <a href="https://docs.probectl.com">Docs</a>
@@ -453,11 +454,40 @@
     </div>
   </section>
 
+  <!-- AI -->
+  <section class="band" id="ai">
+    <div class="wrap">
+      <div class="sechead io"><span class="secno">04 / AI</span></div>
+      <div class="two">
+        <div class="io">
+          <h2>Ask your network.<br>It answers with <span style="color:var(--amber)">evidence</span>.</h2>
+          <p class="lead" style="margin-top:1.2rem">Most "AI-powered" observability sends your telemetry to someone else's model and returns prose. probectl's assistant is built the other way around: it answers <b>only with citations to signals you're allowed to see</b>, says <i>"insufficient evidence"</i> instead of inventing a story, and runs <b>air-gapped by default</b>.</p>
+          <div class="feat">
+            <div class="fitem"><span class="fi">→</span><div><h3>Cited, or silent</h3><p>Every claim links to a real incident or change event. Ungrounded model claims are rejected before you see them — "I don't know" is a first-class answer.</p></div></div>
+            <div class="fitem"><span class="fi">→</span><div><h3>The sovereignty ladder</h3><p>Deterministic built-in engine (zero config, no LLM) → a model on <em>your</em> hardware (Ollama / vLLM, loopback, no consent needed) → a cloud model only behind an explicit operator acknowledgment <em>and</em> per-tenant consent, every call audited.</p></div></div>
+            <div class="fitem"><span class="fi">→</span><div><h3>Your AI, your map — MCP</h3><p>An MCP server hands the live network map to Claude or any MCP client as eight tenant-scoped tools: read-only queries, one gated analysis, one proposal-only remediation. The AI sees exactly what its token's user may see.</p></div></div>
+          </div>
+        </div>
+        <div class="log io">
+          <div class="bar"><span>ASK PROBECTL · /v1/ai/ask</span><span class="live"><i></i>SAMPLE</span></div>
+          <div class="body">
+<div><span class="am">you</span> <span class="hl">why is checkout slow?</span></div>
+<div class="rule">──────────────────────────────</div>
+<div><span class="cy">root_cause</span> AS64500 origin change shifted the egress path</div>
+<div><span class="cy">grounded</span> true · <span class="cy">confidence</span> high</div>
+<div><span class="ts">cites → incident 4471 · change evt 8821 (deploy 14:03Z)</span></div>
+<div><span class="ts">engine: builtin (air-gapped) · no data left the network</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- PERIMETER -->
   <section class="band peri" id="perimeter">
     <div class="wrap peri-grid">
       <div class="io">
-        <div class="sechead"><span class="secno">04 / PERIMETER</span></div>
+        <div class="sechead"><span class="secno">05 / PERIMETER</span></div>
         <h2>The map never leaves the room.</h2>
         <p class="lead" style="margin-top:1.2rem">probectl is self-hosted by design. Your telemetry stays inside your perimeter — no phone-home, ever, right down to license checks, which are offline math. Point the AI at a local model and the whole observatory runs air-gapped.</p>
       </div>
@@ -473,7 +503,7 @@
   <!-- DEPLOY -->
   <section class="band" id="deploy">
     <div class="wrap">
-      <div class="sechead io"><span class="secno">05 / DEPLOY</span></div>
+      <div class="sechead io"><span class="secno">06 / DEPLOY</span></div>
       <div class="two">
         <div class="term io">
           <div class="bar"><span class="d"></span><span class="d"></span><span class="d a"></span><span class="t">~ / first data in one command</span></div>
@@ -506,7 +536,7 @@
   <!-- TRUST & PROVIDERS -->
   <section class="band" id="trust">
     <div class="wrap">
-      <div class="sechead io"><span class="secno">06 / TRUST</span></div>
+      <div class="sechead io"><span class="secno">07 / TRUST</span></div>
       <h2 class="io">Built like infrastructure, not a demo.</h2>
       <div class="badges io" style="grid-template-columns:repeat(3,1fr);margin-top:38px">
         <div class="badge"><div class="bt">Signed releases</div><div class="bd">Every artifact is keyless-signed (cosign) and self-verified in the release pipeline — check the signature before you run anything.</div></div>

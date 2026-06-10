@@ -30,7 +30,7 @@ const DOCS_HOST = "docs.probectl.com";
 // Bump whenever shell()/rendering changes shape: it versions every cache key,
 // so a deploy instantly stops serving pages rendered by older code (no
 // reliance on KV `gen` propagation for layout changes).
-const CACHE_V = "v3";
+const CACHE_V = "v4";
 
 const ghHeaders = (env: Env): Record<string, string> => ({
   Authorization: `Bearer ${env.GITHUB_TOKEN}`,
@@ -79,6 +79,7 @@ const NAV: NavSection[] = [
     { route: "white-label", label: "White-label" },
   ]},
   { title: "AI", items: [
+    { route: "ai-quickstart", label: "AI quickstart (start here)" },
     { route: "ai-rca", label: "Root-cause analysis" },
     { route: "ai-query", label: "Semantic query" },
     { route: "ai-authoring", label: "AI authoring" },
