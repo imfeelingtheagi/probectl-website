@@ -1,0 +1,21 @@
+{
+  "name": "probectl-website",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "probectl.com — static landing page + live docs rendered from the probectl repo via Cloudflare Workers",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "marked": "18.0.5",
+    "marked-gfm-heading-id": "4.1.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20260610.1",
+    "typescript": "5.8.3",
+    "wrangler": "4.94.0"
+  }
+}

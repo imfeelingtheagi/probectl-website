@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>probectl — one vantage point for the entire network</title>
+<meta name="description" content="Self-hosted network observability. Map five planes of signal — synthetic, routing, flow, device, eBPF — onto a single live view. From BGP across the open internet to packets in your kernel. Telemetry never leaves your network — no phone-home, ever.">
+<link rel="canonical" href="https://probectl.com/">
+<meta name="theme-color" content="#0a1024">
+
+<!-- favicon: inline SVG of the brand mark (self-contained, no extra request) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Crect width='20' height='20' rx='4' fill='%230a1024'/%3E%3Ccircle cx='10' cy='10' r='7' fill='none' stroke='%23ffb454' stroke-width='1.4'/%3E%3Ccircle cx='10' cy='10' r='2.6' fill='none' stroke='%23ffb454' stroke-width='1.4'/%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%23ffb454'/%3E%3C/svg%3E">
+
+<!-- Open Graph / social preview. A generated placeholder og-cover.png ships in
+     this directory — replace with a branded 1200x630 export before launch. -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://probectl.com/">
+<meta property="og:title" content="probectl — one vantage point for the entire network">
+<meta property="og:description" content="Self-hosted network observability. Five planes of signal — synthetic, routing, flow, device, eBPF — on one live map. No phone-home, ever.">
+<meta property="og:image" content="https://probectl.com/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="probectl — five signal planes converging on one vantage point">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="probectl — one vantage point for the entire network">
+<meta name="twitter:description" content="Self-hosted network observability. Five planes of signal on one live map. No phone-home, ever.">
+<meta name="twitter:image" content="https://probectl.com/og-cover.png">
+
+<!-- Webfonts load progressively (non-render-blocking) with a print->all swap; the fallback stacks
+     below keep the page fully functional offline if the fonts never load.
+     LAUNCH TASK: self-host these (third-party calls are off-brand here) — see fonts/README.md. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Sora:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Sora:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap"></noscript>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "probectl",
+  "url": "https://probectl.com/",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Linux, Docker, Kubernetes",
+  "description": "Self-hosted, multi-tenant network observability: synthetic testing, BGP/routing intelligence, flow analytics, device telemetry, and eBPF host/L7 on one OpenTelemetry-native control plane, with cross-plane AI root-cause analysis. Telemetry never leaves the operator's network.",
+  "softwareHelp": "https://probectl.com/docs"
+}
+</script>
+<style>
+  :root{
+    --bg:#0a1024; --bg-2:#0d1330; --panel:#101840; --raise:#151d48;
+    --line:#212a57; --line-2:#2f3a78;
+    --ink:#eef0fb; --ink-2:#9aa3cf; --ink-3:#7681b8;
+    --amber:#ffb454; --amber-2:#c9821f; --cyan:#6fe0ff;
+    --glow:rgba(255,180,84,.18); --cyanglow:rgba(111,224,255,.16);
+    --display:'Syne','Trebuchet MS',system-ui,sans-serif; --sans:'Sora',system-ui,sans-serif; --mono:'DM Mono',ui-monospace,SFMono-Regular,monospace;
+    --maxw:1180px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.64;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(60% 50% at 78% 8%,var(--glow),transparent 60%),
+      radial-gradient(50% 40% at 12% 90%,var(--cyanglow),transparent 62%),
+      radial-gradient(#ffffff09 1px,transparent 1px) 0 0/44px 44px;
+    -webkit-mask-image:linear-gradient(#000,#000);}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 30px;position:relative;z-index:1}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:var(--amber);color:#1a1000}
+
+  .kick{font-family:var(--mono);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--amber);display:inline-flex;align-items:center;gap:.6em}
+  .kick .dot{width:6px;height:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 4px var(--glow)}
+  h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:-.02em;line-height:1.03}
+  .lead{color:var(--ink-2);font-size:1.12rem;line-height:1.64;max-width:56ch}
+
+  /* nav */
+  header{position:sticky;top:0;z-index:50;transition:background .3s,backdrop-filter .3s,border-color .3s;border-bottom:1px solid transparent}
+  header.scrolled{background:rgba(10,16,36,.7);backdrop-filter:blur(12px);border-color:var(--line)}
+  nav{display:flex;align-items:center;justify-content:space-between;height:70px}
+  .brand{display:flex;align-items:center;gap:.6rem;font-family:var(--display);font-weight:700;font-size:1.18rem;letter-spacing:-.02em}
+  .brand svg{flex:0 0 auto}
+  .navlinks{display:flex;gap:2rem;font-family:var(--mono);font-size:.8rem;color:var(--ink-2)}
+  .navlinks a{transition:color .2s;position:relative}
+  .navlinks a:hover{color:var(--amber)}
+  .btn{font-family:var(--mono);font-size:.82rem;display:inline-flex;align-items:center;gap:.5em;padding:.62rem 1.1rem;border-radius:999px;background:var(--amber);color:#1a1000;border:1px solid var(--amber);cursor:pointer;font-weight:500;transition:transform .15s,box-shadow .25s}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 10px 34px -10px var(--glow),0 0 0 1px var(--amber)}
+  .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line-2);border-radius:999px}
+  .btn.ghost:hover{border-color:var(--amber);color:var(--amber);box-shadow:none}
+  .nav-actions{display:flex;align-items:center;gap:.9rem}
+  .iconlink{color:var(--ink-2);display:inline-flex;align-items:center;transition:color .2s}
+  .iconlink:hover{color:var(--amber)}
+  .menu-btn{display:none;background:none;border:1px solid var(--line-2);border-radius:10px;width:42px;height:38px;color:var(--ink);cursor:pointer;align-items:center;justify-content:center}
+  .menu-btn:hover{border-color:var(--amber);color:var(--amber)}
+  @media(max-width:880px){
+    .menu-btn{display:inline-flex}
+    .navlinks{position:absolute;top:70px;left:0;right:0;flex-direction:column;gap:0;background:rgba(10,16,36,.97);backdrop-filter:blur(12px);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:.4rem 30px 1rem;display:none}
+    header.nav-open .navlinks{display:flex}
+    header.nav-open{background:rgba(10,16,36,.92);backdrop-filter:blur(12px);border-color:var(--line)}
+    .navlinks a{padding:.9rem .2rem;border-bottom:1px solid var(--line)}
+    .navlinks a:last-child{border-bottom:none}
+  }
+
+  /* hero */
+  .hero{padding:70px 0 90px}
+  .hero-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:48px;align-items:center}
+  .hero h1{font-size:clamp(2.7rem,5.7vw,4.8rem);margin:1.2rem 0 0}
+  .hero h1 .em{color:var(--amber)}
+  .hero .lead{margin-top:1.5rem}
+  .hero-cta{display:flex;align-items:center;gap:1.1rem;margin-top:2.1rem;flex-wrap:wrap}
+  .textlink{font-family:var(--mono);font-size:.85rem;color:var(--ink-2);display:inline-flex;gap:.4em;transition:color .2s,gap .2s}
+  .textlink:hover{color:var(--amber);gap:.65em}
+  .hero-stats{display:flex;gap:2.2rem;margin-top:2.4rem;font-family:var(--mono)}
+  .hero-stats .st .n{font-family:var(--display);font-weight:700;font-size:1.7rem;color:var(--ink)}
+  .hero-stats .st .n em{font-style:normal;color:var(--amber)}
+  .hero-stats .st .l{font-size:.68rem;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin-top:.15rem}
+
+  .scope-wrap{position:relative}
+  .scope-wrap svg{display:block;width:100%;height:auto;overflow:visible}
+  .reveal{opacity:0;transform:translateY(14px);animation:rise .85s cubic-bezier(.2,.7,.2,1) forwards}
+
+  /* sections */
+  section{position:relative;z-index:1}
+  .band{padding:104px 0;border-top:1px solid var(--line)}
+  .sechead{display:flex;align-items:baseline;gap:1rem;margin-bottom:14px}
+  .secno{font-family:var(--mono);font-size:.76rem;color:var(--amber-2);letter-spacing:.1em}
+  .band h2{font-size:clamp(2rem,3.7vw,2.9rem)}
+  .band .intro{color:var(--ink-2);font-size:1.08rem;max-width:60ch;margin:16px 0 44px}
+
+  /* signals grid */
+  .sig-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .sig{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,var(--panel),#0c1230);padding:1.7rem;position:relative;overflow:hidden;transition:transform .2s,border-color .25s,box-shadow .25s}
+  .sig:hover{transform:translateY(-3px);border-color:var(--amber-2);box-shadow:0 24px 50px -30px #000,0 0 0 1px var(--amber-2)}
+  .sig .gly{width:40px;height:40px;color:var(--amber);margin-bottom:1.1rem}
+  .sig .tag{font-family:var(--mono);font-size:.68rem;letter-spacing:.13em;color:var(--amber-2);text-transform:uppercase}
+  .sig h3{font-family:var(--display);font-size:1.28rem;font-weight:700;margin:.55rem 0 .5rem}
+  .sig p{color:var(--ink-2);font-size:.94rem;line-height:1.55}
+  .sig.span2{grid-column:span 1}
+  @media(max-width:860px){.sig-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.sig-grid{grid-template-columns:1fr}}
+
+  /* correlation: observation log */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+  .log{border:1px solid var(--line);border-radius:16px;background:#080d22;overflow:hidden;box-shadow:0 30px 70px -38px #000}
+  .log .bar{display:flex;align-items:center;gap:.6rem;padding:.8rem 1.1rem;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;color:var(--ink-3)}
+  .log .bar .live{margin-left:auto;display:inline-flex;align-items:center;gap:.4rem;color:var(--amber)}
+  .log .bar .live i{width:6px;height:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 3px var(--glow);font-style:normal}
+  .log .body{padding:1.2rem 1.3rem;font-family:var(--mono);font-size:.82rem;line-height:1.95;color:var(--ink-2)}
+  .log .body .ts{color:var(--ink-3)}
+  .log .body .am{color:var(--amber)}
+  .log .body .cy{color:var(--cyan)}
+  .log .body .hl{color:var(--ink)}
+  .log .body .rule{color:#243066}
+  .feat{display:flex;flex-direction:column;gap:1.4rem;margin-top:.4rem}
+  .fitem{display:flex;gap:.95rem;align-items:flex-start}
+  .fitem .fi{color:var(--amber);font-family:var(--mono);font-size:.85rem;width:1.4rem;flex:0 0 auto;padding-top:.18rem}
+  .fitem h3{font-family:var(--display);font-size:1.12rem;font-weight:700}
+  .fitem p{color:var(--ink-2);font-size:.95rem;margin-top:.2rem;line-height:1.55}
+
+  /* perimeter */
+  .peri{background:radial-gradient(80% 120% at 50% -10%,#101840,transparent 60%)}
+  .peri-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:50px;align-items:center}
+  .badges{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .badge{border:1px solid var(--line);border-radius:14px;padding:1.1rem 1.15rem;background:#0c1230}
+  .badge .bt{font-family:var(--mono);font-size:.72rem;letter-spacing:.13em;color:var(--amber);text-transform:uppercase;display:flex;align-items:center;gap:.5rem}
+  .badge .bt::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 3px var(--glow)}
+  .badge .bd{color:var(--ink-2);font-size:.86rem;margin-top:.5rem;line-height:1.45}
+
+  /* deploy */
+  .term{border:1px solid var(--line);border-radius:16px;background:#080d22;overflow:hidden;box-shadow:0 30px 70px -38px #000}
+  .term .bar{display:flex;gap:.55rem;align-items:center;padding:.75rem 1.05rem;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:.72rem;color:var(--ink-3)}
+  .term .bar .d{width:9px;height:9px;border-radius:50%;background:#202a55}
+  .term .bar .d.a{background:var(--amber-2)}
+  .term .bar .t{margin-left:auto;letter-spacing:.08em}
+  .term .body{padding:1.2rem 1.3rem;font-family:var(--mono);font-size:.83rem;line-height:1.95;color:var(--ink-2)}
+  .term .body .am{color:var(--amber)}.term .body .cy{color:var(--cyan)}.term .body .hl{color:var(--ink)}.term .body .r{color:var(--ink-3)}
+  .tags{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1.7rem}
+  .tag{font-family:var(--mono);font-size:.74rem;color:var(--ink-2);border:1px solid var(--line-2);border-radius:999px;padding:.4rem .8rem}
+  .tag b{color:var(--amber);font-weight:500}
+
+  /* cta */
+  .cta{padding:120px 0;text-align:center;border-top:1px solid var(--line);position:relative}
+  .cta::before{content:"";position:absolute;inset:0;background:radial-gradient(55% 100% at 50% 0%,var(--glow),transparent 60%);pointer-events:none}
+  .cta h2{font-size:clamp(2.2rem,4.5vw,3.5rem);position:relative}
+  .cta .em{color:var(--amber)}
+  .cta p{color:var(--ink-2);margin:1.1rem auto 2.1rem;max-width:48ch;position:relative}
+  .cta-row{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;position:relative}
+
+  /* footer */
+  footer{border-top:1px solid var(--line);padding:54px 0 40px;background:#070c1e}
+  .foot{display:grid;grid-template-columns:1.7fr 1fr 1fr 1fr;gap:34px}
+  .foot .about p{color:var(--ink-3);font-size:.9rem;margin-top:.9rem;max-width:34ch;line-height:1.55}
+  .foot h4{font-family:var(--mono);font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);margin-bottom:.9rem}
+  .foot a{display:block;color:var(--ink-2);font-size:.9rem;padding:.26rem 0}
+  .foot a:hover{color:var(--amber)}
+  .footbar{display:flex;justify-content:space-between;align-items:center;margin-top:42px;padding-top:24px;border-top:1px solid var(--line);font-family:var(--mono);font-size:.74rem;color:var(--ink-3);flex-wrap:wrap;gap:12px}
+  .footbar .on{display:inline-flex;align-items:center;gap:.5rem;color:var(--amber-2)}
+  .footbar .on .d{width:6px;height:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 3px var(--glow);animation:blip 3s ease-in-out infinite}
+  @media(max-width:880px){.foot{grid-template-columns:1fr 1fr}.foot .about{grid-column:1/-1}.two,.peri-grid,.hero-grid{grid-template-columns:1fr;gap:40px}.band{padding:78px 0}}
+  @media(max-width:560px){.foot{grid-template-columns:1fr}.badges{grid-template-columns:1fr}.hero-stats{gap:1.5rem}.iconlink{display:none}}
+
+  @keyframes rise{to{opacity:1;transform:none}}
+  @keyframes blip{0%,100%{opacity:1}50%{opacity:.3}}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  @keyframes twinkle{0%,100%{opacity:1}50%{opacity:.35}}
+  .sweep{transform-origin:260px 260px;animation:rot 9s linear infinite}
+  .io{opacity:0;transform:translateY(16px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1)}
+  .io.in{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal,.io{opacity:1;transform:none}}
+
+  /* skip link */
+  .skip{position:absolute;left:-9999px;top:0;z-index:100;background:var(--amber);color:#1a1000;padding:.6rem 1rem;border-radius:0 0 10px 0;font-family:var(--mono);font-size:.8rem}
+  .skip:focus{left:0}
+  /* a11y util */
+  .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  /* early-access form */
+  .access-form{max-width:540px;margin:0 auto;text-align:left;position:relative}
+  .af-row{display:flex;gap:.6rem}
+  .access-form input{width:100%;font-family:var(--sans);font-size:.95rem;color:var(--ink);background:#0c1230;border:1px solid var(--line-2);border-radius:999px;padding:.82rem 1.15rem;outline:none;transition:border-color .2s,box-shadow .2s}
+  .access-form input::placeholder{color:var(--ink-3)}
+  .access-form input:focus{border-color:var(--amber);box-shadow:0 0 0 3px var(--glow)}
+  .access-form .af-row .btn{white-space:nowrap}
+  .access-form #af-ctx{margin-top:.6rem}
+  .af-msg{font-family:var(--mono);font-size:.82rem;margin:.7rem 0 0;min-height:1.2em}
+  .af-msg.ok{color:var(--cyan)} .af-msg.err{color:#ff9a9a}
+  .af-fine{font-family:var(--mono);font-size:.72rem;color:var(--ink-3);margin-top:.7rem}
+  @media(max-width:560px){.af-row{flex-direction:column}.access-form input{border-radius:14px}.access-form .af-row .btn{border-radius:14px;justify-content:center}}
+</style>
+</head>
+<body>
+<a class="skip" href="#top">Skip to content</a>
+
+<!-- The /api/access form endpoint and /docs/* routes are served by the Worker in src/index.ts -->
+<header id="hdr">
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="#top">
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="none" stroke="#ffb454" stroke-width="1.4"/><circle cx="10" cy="10" r="3.3" fill="none" stroke="#ffb454" stroke-width="1.4"/><circle cx="10" cy="10" r="1.4" fill="#ffb454"/></svg>
+        probectl
+      </a>
+      <div class="navlinks" id="navlinks">
+        <a href="#signals">Signals</a>
+        <a href="#correlate">Correlation</a>
+        <a href="#perimeter">Perimeter</a>
+        <a href="#deploy">Deploy</a>
+        <a href="/docs">Docs</a>
+        <a href="https://github.com/imfeelingtheagi/probectl" target="_blank" rel="noopener">GitHub ↗</a>
+      </div>
+      <div class="nav-actions">
+        <a class="iconlink" href="https://github.com/imfeelingtheagi/probectl" aria-label="probectl on GitHub" target="_blank" rel="noopener">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
+        <a class="btn" href="#access">Get access</a>
+        <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="navlinks">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="kick reveal" style="animation-delay:.05s"><span class="dot"></span>network observatory</span>
+        <h1 class="reveal" style="animation-delay:.12s">One vantage point<br>for the <span class="em">entire</span> network.</h1>
+        <p class="lead reveal" style="animation-delay:.22s">From BGP routes crossing the open internet down to packets inside your kernel, probectl maps five planes of signal onto a single live view — synthetic, routing, flow, device, and eBPF. Self-hosted, so the map is yours alone.</p>
+        <div class="hero-cta reveal" style="animation-delay:.32s">
+          <a class="btn" href="#access">Get early access →</a>
+          <a class="textlink" href="#signals">↳ see the signals</a>
+        </div>
+        <div class="hero-stats reveal" style="animation-delay:.42s">
+          <div class="st"><div class="n">5</div><div class="l">signal planes</div></div>
+          <div class="st"><div class="n"><em>0</em></div><div class="l">phone-home · ever</div></div>
+          <div class="st"><div class="n">1</div><div class="l">live view</div></div>
+        </div>
+      </div>
+
+      <!-- radar scope: routes converging on your vantage point -->
+      <div class="scope-wrap reveal" style="animation-delay:.3s">
+        <svg viewBox="0 0 520 520" role="img" aria-label="A scope showing network routes across the internet converging on the operator's vantage point">
+          <defs>
+            <clipPath id="disc"><circle cx="260" cy="260" r="218"/></clipPath>
+            <radialGradient id="sweepg" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffb454" stop-opacity=".35"/>
+              <stop offset="100%" stop-color="#ffb454" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="core" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffb454" stop-opacity=".5"/>
+              <stop offset="100%" stop-color="#ffb454" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <!-- bezel -->
+          <circle cx="260" cy="260" r="232" fill="none" stroke="#212a57" stroke-width="1"/>
+          <circle cx="260" cy="260" r="218" fill="#0b1130" stroke="#2f3a78" stroke-width="1.2"/>
+          <g stroke="#212a57" stroke-width="1">
+            <!-- bezel ticks -->
+            <line x1="260" y1="22" x2="260" y2="34"/><line x1="260" y1="486" x2="260" y2="498"/>
+            <line x1="22" y1="260" x2="34" y2="260"/><line x1="486" y1="260" x2="498" y2="260"/>
+          </g>
+
+          <g clip-path="url(#disc)">
+            <!-- graticule -->
+            <g stroke="#1c2550" stroke-width="1" fill="none">
+              <ellipse cx="260" cy="260" rx="218" ry="70"/>
+              <ellipse cx="260" cy="260" rx="218" ry="140"/>
+              <ellipse cx="260" cy="260" rx="70" ry="218"/>
+              <ellipse cx="260" cy="260" rx="140" ry="218"/>
+              <line x1="42" y1="260" x2="478" y2="260"/>
+              <line x1="260" y1="42" x2="260" y2="478"/>
+            </g>
+            <!-- rotating sweep -->
+            <g class="sweep"><path d="M260,260 L260,42 A218,218 0 0,1 414,106 Z" fill="url(#sweepg)"/></g>
+
+            <!-- route arcs (great-circle-ish) -->
+            <g fill="none" stroke="#ffb454" stroke-width="1.3" opacity=".55">
+              <path d="M120,160 Q230,90 360,150"/>
+              <path d="M150,360 Q260,420 400,330"/>
+              <path d="M380,150 Q300,250 175,300"/>
+              <path d="M120,160 Q200,280 260,260"/>
+            </g>
+            <!-- cyan secondary arcs -->
+            <g fill="none" stroke="#6fe0ff" stroke-width="1.1" opacity=".4">
+              <path d="M400,330 Q330,300 260,260"/>
+              <path d="M175,300 Q210,280 260,260"/>
+            </g>
+
+            <!-- highlighted route to vantage (AS64500 -> you) -->
+            <path id="rt" d="M380,150 Q330,210 260,260" fill="none" stroke="#ffb454" stroke-width="2"/>
+            <circle r="3" fill="#ffb454"><animateMotion dur="2.4s" repeatCount="indefinite" path="M380,150 Q330,210 260,260"/></circle>
+
+            <!-- nodes -->
+            <g>
+              <circle cx="120" cy="160" r="3.4" fill="#ffb454" style="animation:twinkle 3.2s ease-in-out infinite"/>
+              <circle cx="360" cy="150" r="3" fill="#ffb454"/>
+              <circle cx="380" cy="150" r="4" fill="#0b1130" stroke="#ffb454" stroke-width="1.6"/>
+              <circle cx="150" cy="360" r="3" fill="#6fe0ff" style="animation:twinkle 4s ease-in-out infinite"/>
+              <circle cx="400" cy="330" r="3.4" fill="#ffb454"/>
+              <circle cx="175" cy="300" r="3" fill="#6fe0ff"/>
+            </g>
+          </g>
+
+          <!-- vantage point (you) -->
+          <circle cx="260" cy="260" r="34" fill="url(#core)"/>
+          <circle cx="260" cy="260" r="11" fill="#0b1130" stroke="#ffb454" stroke-width="1.6"/>
+          <circle cx="260" cy="260" r="3.2" fill="#ffb454"/>
+          <circle cx="260" cy="260" r="22" fill="none" stroke="#ffb454" stroke-width="1" opacity=".35"/>
+
+          <!-- coordinate labels -->
+          <g font-family="DM Mono" font-size="10.5" fill="#7681b8">
+            <text x="388" y="142">AS64500</text>
+            <text x="92" y="150">203.0.113.0/24</text>
+            <text x="406" y="346">RIPE RIS</text>
+            <text x="272" y="252" fill="#ffb454">YOU · vantage</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- SIGNALS -->
+  <section class="band" id="signals">
+    <div class="wrap">
+      <div class="sechead io"><span class="secno">01 / SIGNALS</span></div>
+      <h2 class="io">Five signals. One map.</h2>
+      <p class="intro io">Each one is gathered by your own agents — no external collectors, no third-party cloud — and plotted onto the same correlated view.</p>
+      <div class="sig-grid io">
+        <div class="sig">
+          <svg class="gly" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="20" r="2.5"/><path d="M14 20a6 6 0 0 1 6-6 6 6 0 0 1 6 6"/><path d="M14 20a10 10 0 0 1 10-10"/><path d="M14 20a14 14 0 0 1 14-14"/></svg>
+          <div class="tag">01 · Active</div>
+          <h3>Synthetic &amp; path</h3>
+          <p>ICMP, TCP, UDP, DNS, HTTP, agent-to-agent, voice quality and last-mile WiFi — plus ECMP/MPLS-aware hop-by-hop traces.</p>
+        </div>
+        <div class="sig">
+          <svg class="gly" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="20" r="2.6"/><circle cx="32" cy="10" r="2.6"/><circle cx="32" cy="30" r="2.6"/><path d="M10.3 19l19.4-8M10.3 21l19.4 8"/></svg>
+          <div class="tag">02 · Routing</div>
+          <h3>BGP intelligence</h3>
+          <p>Live RIS / RouteViews monitoring for hijacks, leaks, and origin changes — RPKI-aware, with ASN and geo context.</p>
+        </div>
+        <div class="sig">
+          <svg class="gly" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 13h22M6 20h28M6 27h18"/><path d="M28 9l5 4-5 4M34 16l5 4-5 4M24 23l5 4-5 4"/></svg>
+          <div class="tag">03 · Flow</div>
+          <h3>Flow analytics</h3>
+          <p>Passive NetFlow, IPFIX and sFlow — top-talkers, link capacity and egress anomalies, with sampling corrected.</p>
+        </div>
+        <div class="sig">
+          <svg class="gly" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="11" y="11" width="18" height="18" rx="2"/><path d="M16 7v4M24 7v4M16 29v4M24 29v4M7 16h4M7 24h4M29 16h4M29 24h4"/></svg>
+          <div class="tag">04 · Device</div>
+          <h3>Device telemetry</h3>
+          <p>SNMP plus streaming gNMI / OpenConfig — interface health, errors and capacity for every box in the fabric.</p>
+        </div>
+        <div class="sig">
+          <svg class="gly" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 12h22M9 20h22M9 28h22"/><path d="M9 8v24M31 8v24" opacity=".5"/><circle cx="20" cy="20" r="2.4" fill="currentColor" stroke="none"/></svg>
+          <div class="tag">05 · Kernel</div>
+          <h3>eBPF · L3–L7</h3>
+          <p>A kernel sensor that sees L3 through L7 and maps service dependencies — with zero changes to your applications.</p>
+        </div>
+        <div class="sig" style="display:flex;flex-direction:column;justify-content:center;background:linear-gradient(180deg,#15203f,#0c1230)">
+          <div class="tag" style="color:var(--amber)">+ correlation</div>
+          <h3 style="margin-top:.5rem">All on one<br>OpenTelemetry-based<br>control plane.</h3>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CORRELATION -->
+  <section class="band" id="correlate">
+    <div class="wrap">
+      <div class="sechead io"><span class="secno">02 / CORRELATION</span></div>
+      <div class="two">
+        <div class="io">
+          <h2>From signal to cause.</h2>
+          <p class="lead" style="margin-top:1.2rem">A flare on the map isn't an answer. probectl folds every plane's signal into one tenant-scoped incident, then walks the live topology to find the cause — and cites the evidence behind each step.</p>
+          <div class="feat">
+            <div class="fitem"><span class="fi">→</span><div><h3>Traced across planes</h3><p>A route change, a path shift, and an egress spike become one story — not three pages.</p></div></div>
+            <div class="fitem"><span class="fi">→</span><div><h3>Cited, never guessed</h3><p>Every claim links to the exact signal that supports it. A reading you can audit.</p></div></div>
+            <div class="fitem"><span class="fi">→</span><div><h3>Observe-only by default</h3><p>It reads the network and explains it. It never acts without an explicit, audited go-ahead.</p></div></div>
+            <div class="fitem"><span class="fi">→</span><div><h3>Ask it in plain language</h3><p>The built-in assistant answers with cited, tenant-scoped evidence. Its default engine is deterministic and local — no LLM is contacted unless you connect one (Ollama/vLLM for full air-gap) — and an MCP server hands the same map to your own AI tools.</p></div></div>
+          </div>
+        </div>
+        <div class="log io">
+          <div class="bar"><span>OBSERVATION LOG · incident 4471</span><span class="live"><i></i>LIVE</span></div>
+          <div class="body">
+<div><span class="ts">14:01:48Z</span> <span class="hl">api-gateway p99 latency +6.2×</span></div>
+<div><span class="ts">14:02:11Z</span> <span class="am">⤷ bgp</span> origin change observed, AS64500</div>
+<div><span class="ts">14:02:13Z</span> <span class="am">⤷ path</span> +2 hops via transit <span class="ts">(#8821)</span></div>
+<div><span class="ts">14:02:20Z</span> <span class="cy">⤷ flow</span> egress <span class="am">+340%</span> · 203.0.113.0/24</div>
+<div><span class="ts">14:02:34Z</span> <span class="cy">⤷ ebpf</span> retransmits up · svc/gateway</div>
+<div class="rule">──────────────────────────────</div>
+<div><span class="am">resolved →</span> <span class="hl">cause: AS64500 origin change</span></div>
+<div><span class="ts">confidence high · 1 incident, not 31 alerts</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PERIMETER -->
+  <section class="band peri" id="perimeter">
+    <div class="wrap peri-grid">
+      <div class="io">
+        <div class="sechead"><span class="secno">03 / PERIMETER</span></div>
+        <h2>The map never leaves the room.</h2>
+        <p class="lead" style="margin-top:1.2rem">probectl is self-hosted by design. Your telemetry stays inside your perimeter — no phone-home, ever, right down to license checks, which are offline math. Point the AI at a local model and the whole observatory runs air-gapped.</p>
+      </div>
+      <div class="badges io">
+        <div class="badge"><div class="bt">No phone-home</div><div class="bd">Zero outbound beacons or analytics — verified at the boundary.</div></div>
+        <div class="badge"><div class="bt">Local AI</div><div class="bd">Run RCA on Ollama or vLLM. Nothing crosses the perimeter.</div></div>
+        <div class="badge"><div class="bt">mTLS everywhere</div><div class="bd">Every channel mutually authenticated and encrypted, with SPIFFE-based agent identity.</div></div>
+        <div class="badge"><div class="bt">FIPS-ready</div><div class="bd">Builds against a FIPS 140-3 validated crypto module.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEPLOY -->
+  <section class="band" id="deploy">
+    <div class="wrap">
+      <div class="sechead io"><span class="secno">04 / DEPLOY</span></div>
+      <div class="two">
+        <div class="term io">
+          <div class="bar"><span class="d"></span><span class="d"></span><span class="d a"></span><span class="t">~ / first data in one command</span></div>
+          <div class="body">
+<div><span class="am">$</span> <span class="hl">docker compose -f deploy/compose/eval.yml up --build -d</span></div>
+<div><span class="cy">✓</span> control plane online    <span class="r">loopback only · eval stack</span></div>
+<div><span class="cy">✓</span> eBPF agent replaying    <span class="r">labelled SAMPLE flows · no kernel needed</span></div>
+<div> </div>
+<div><span class="am">$</span> <span class="hl">docker compose -f deploy/compose/eval.yml --profile tools run --rm viewer</span></div>
+<div><span class="r">"edges": [{"from": <span class="cy">"service:10.0.1.5"</span>, "to": <span class="cy">"service:10.0.2.9"</span>, "kind": "flow"}, …</span></div>
+<div><span class="am">→</span> <span class="hl">your first data: a live service map</span> <span class="r">· real commands, try them</span></div>
+          </div>
+        </div>
+        <div class="io">
+          <h2>Command the observatory.</h2>
+          <p class="lead" style="margin-top:1.2rem">Source-available and self-hosted. The evaluation stack on the left is real — sample data, loopback-only, sixty seconds to a service map. Production is the same idea grown up: one static Go binary per agent, Docker or Helm, HTTPS by default — single-tenant for one team, or multi-tenant and white-labeled for MSPs.</p>
+          <p class="lead" style="margin-top:.9rem">The five-plane core is <span style="color:var(--amber)">free</span>. Enterprise adds the FIPS build, BYOK, and multi-region HA; Provider/MSP adds the management plane, metering, and white-label — <a href="/docs/editions" style="color:var(--cyan)">see editions</a>.</p>
+          <div class="tags">
+            <span class="tag"><b>source-available</b></span>
+            <span class="tag">docker / helm</span>
+            <span class="tag">multi-tenant / MSP</span>
+            <span class="tag">MCP server</span>
+            <span class="tag">OpenTelemetry / OTLP</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta" id="access">
+    <div class="wrap">
+      <span class="kick" style="justify-content:center"><span class="dot"></span>probectl.com</span>
+      <h2 style="margin-top:1rem">Claim your <span class="em">vantage point.</span></h2>
+      <p>Early access is opening for self-hosted and MSP deployments. Tell us about your network and we'll send you a build.</p>
+      <!-- Handled by the Worker (/api/access): submissions stay on our own infrastructure. -->
+      <form class="access-form" id="accessForm" action="/api/access" method="POST" novalidate>
+        <div class="af-row">
+          <label class="sr-only" for="af-email">Work email</label>
+          <input id="af-email" name="email" type="email" required autocomplete="email" placeholder="you@yourcompany.com">
+          <button class="btn" type="submit">Get early access →</button>
+        </div>
+        <label class="sr-only" for="af-ctx">About your network (optional)</label>
+        <input id="af-ctx" name="network" type="text" placeholder="Optional: a line about your network — size, planes you care about">
+        <p class="af-msg" id="afMsg" role="status" aria-live="polite"></p>
+        <p class="af-fine">Self-hosted &amp; source-available · we'll only email you about your build, never share it.</p>
+      </form>
+      <p style="position:relative;margin-top:1.3rem"><a class="textlink" href="/docs/getting-started">↳ read the docs</a></p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div class="about">
+        <a class="brand" href="#top">
+          <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8.5" fill="none" stroke="#ffb454" stroke-width="1.4"/><circle cx="10" cy="10" r="3.3" fill="none" stroke="#ffb454" stroke-width="1.4"/><circle cx="10" cy="10" r="1.4" fill="#ffb454"/></svg>
+          probectl
+        </a>
+        <p>Self-hosted network observability. Five planes of signal, one live map — on infrastructure you own.</p>
+      </div>
+      <div><h4>Map</h4><a href="#signals">Signals</a><a href="#correlate">Correlation</a><a href="#perimeter">Perimeter</a><a href="#deploy">Deploy</a></div>
+      <div><h4>Resources</h4><a href="/docs">Documentation</a><a href="/docs/architecture">Architecture</a><a href="/docs/provider-plane">For MSPs</a><a href="https://github.com/imfeelingtheagi/probectl" target="_blank" rel="noopener">GitHub ↗</a></div>
+      <div><h4>Company</h4><a href="#access">Early access</a><a href="https://github.com/imfeelingtheagi/probectl/blob/main/SECURITY.md">Security</a><a href="mailto:hello@probectl.com">Contact</a></div>
+    </div>
+    <div class="footbar">
+      <span>© 2026 probectl · self-hosted · source-available</span>
+      <span class="on"><span class="d"></span>observatory online</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  var hdr=document.getElementById('hdr');
+  var onScroll=function(){hdr.classList.toggle('scrolled',window.scrollY>12)};
+  onScroll();addEventListener('scroll',onScroll,{passive:true});
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:.15,rootMargin:'0px 0px -8% 0px'});
+    document.querySelectorAll('.io').forEach(function(el){io.observe(el)});
+  }else{document.querySelectorAll('.io').forEach(function(el){el.classList.add('in')});}
+
+  // mobile menu
+  var mb=document.querySelector('.menu-btn');
+  if(mb){
+    mb.addEventListener('click',function(){
+      var open=hdr.classList.toggle('nav-open');
+      mb.setAttribute('aria-expanded',open?'true':'false');
+    });
+    document.querySelectorAll('#navlinks a').forEach(function(a){
+      a.addEventListener('click',function(){hdr.classList.remove('nav-open');mb.setAttribute('aria-expanded','false');});
+    });
+  }
+
+  // early-access form
+  var form=document.getElementById('accessForm');
+  if(form){
+    form.addEventListener('submit',function(ev){
+      ev.preventDefault();
+      var email=document.getElementById('af-email'), msg=document.getElementById('afMsg');
+      var re=/^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+      if(!re.test(email.value.trim())){msg.textContent='Please enter a valid work email.';msg.className='af-msg err';email.focus();return;}
+      var data=new FormData(form), action=form.getAttribute('action')||'/api/access';
+      var ok=function(){var to=data.get('email');form.reset();msg.textContent="You're on the list — we'll email "+to+" with a build.";msg.className='af-msg ok';};
+      msg.textContent='Sending…';msg.className='af-msg';
+      fetch(action,{method:'POST',body:data,headers:{'Accept':'application/json'}})
+        .then(function(r){if(r.ok){ok();}else{throw 0;}})
+        .catch(function(){msg.textContent='Something went wrong — email hello@probectl.com and we\'ll sort it.';msg.className='af-msg err';});
+    });
+  }
+</script>
+
+<!-- LAUNCH TASK: measurement without trackers — enable Cloudflare Web Analytics
+     (first-party, cookieless) on the zone, then paste its beacon snippet here. -->
+</body>
+</html>
