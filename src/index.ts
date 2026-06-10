@@ -175,7 +175,6 @@ export function rewriteLinks(h: string, fromRoute: string, prefix: string): stri
   return h.replace(/href="([^"]+)"/g, (m, href: string) => {
     if (/^(https?:|mailto:|#|\/)/.test(href)) return m;
     const [path, anchor] = href.split("#");
-    if (!path.endsWith(".md")) return m;
 
     let p = path.replace(/^(\.\/)+/, "");
     let up = 0;
@@ -183,14 +182,21 @@ export function rewriteLinks(h: string, fromRoute: string, prefix: string): stri
       up++;
       p = p.slice(3);
     }
-    if (up > segs.length) return m; // escapes the repo — leave untouched
+    if (up > segs.length || p === "") return m; // escapes the repo — leave untouched
 
     const target = [...segs.slice(0, segs.length - up), p].join("/");
     const a = anchor ? `#${anchor}` : "";
-    if (/^readme\.md$/i.test(target)) return `href="${prefix}/readme${a}"`;
-    if (target.startsWith("docs/"))
-      return `href="${prefix}/${target.slice(5).replace(/\.md$/, "")}${a}"`;
-    return `href="https://github.com/${REPO}/blob/${BRANCH}/${target}${a}"`;
+
+    if (path.endsWith(".md")) {
+      // another doc → stay on this site
+      if (/^readme\.md$/i.test(target)) return `href="${prefix}/readme${a}"`;
+      if (target.startsWith("docs/"))
+        return `href="${prefix}/${target.slice(5).replace(/\.md$/, "")}${a}"`;
+      return `href="https://github.com/${REPO}/blob/${BRANCH}/${target}${a}"`;
+    }
+    // a non-doc repo file (compose YAML, fixture JSON, ...) → GitHub
+    const kind = target.endsWith("/") ? "tree" : "blob";
+    return `href="https://github.com/${REPO}/${kind}/${BRANCH}/${target.replace(/\/$/, "")}${a}"`;
   });
 }
 
