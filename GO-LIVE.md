@@ -156,6 +156,8 @@ npx wrangler kv key list --binding=DOCS_CACHE --remote --prefix=access:
 
 | Symptom | Fix |
 |---|---|
+| Any wrangler command crashes with "workerd … another platform" | `node_modules` was installed on a different OS (e.g. by a Linux tool into this shared folder). `rm -rf node_modules && npm install`, retry |
+| `secret put` confusion | The word after `put` is the secret's NAME (`GITHUB_TOKEN` / `WEBHOOK_SECRET`); the value is pasted at the hidden prompt that follows — never on the command line |
 | Deploy fails mentioning DNS/record | Delete that DNS record in the dash (Step 5 note), redeploy |
 | docs.probectl.com says "temporarily unavailable" | Secrets missing/typo'd — redo Step 6 |
 | Webhook delivery red ✗ | Secrets don't match — redo Step 2's value on both sides |
