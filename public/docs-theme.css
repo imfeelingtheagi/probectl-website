@@ -86,8 +86,8 @@ header.top {
 .side li a:hover { color: var(--ink); background: var(--panel); text-decoration: none; }
 .side li.active a { color: var(--amber); background: rgba(255,180,84,.07); }
 
-/* main column */
-main { min-width: 0; max-width: 78ch; }
+/* main column (margin:auto centers it within its grid track) */
+main { min-width: 0; max-width: 78ch; margin: 0 auto; width: 100%; }
 main footer {
   margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line);
   color: var(--ink3); font-family: var(--mono); font-size: .76rem;
@@ -186,6 +186,8 @@ ul.index li { font-family: var(--mono); font-size: .9rem; padding: .22rem 0; bre
 .home h1 { font-family: var(--display); font-size: 1.9rem; margin: 0 0 .6rem; }
 
 /* ----------------------------------------------------------- search ---- */
+/* `display:flex` would defeat the HTML `hidden` attribute — never let it. */
+.search-overlay[hidden] { display: none !important; }
 .search-overlay {
   position: fixed; inset: 0; z-index: 60; background: rgba(5,8,20,.7);
   backdrop-filter: blur(4px); display: flex; align-items: flex-start; justify-content: center;

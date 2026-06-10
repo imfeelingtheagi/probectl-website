@@ -27,6 +27,10 @@ const BRANCH = "main";
 const API = "https://api.github.com";
 const DOC_TTL = 60 * 60 * 24; // generation bump invalidates sooner
 const DOCS_HOST = "docs.probectl.com";
+// Bump whenever shell()/rendering changes shape: it versions every cache key,
+// so a deploy instantly stops serving pages rendered by older code (no
+// reliance on KV `gen` propagation for layout changes).
+const CACHE_V = "v2";
 
 const ghHeaders = (env: Env): Record<string, string> => ({
   Authorization: `Bearer ${env.GITHUB_TOKEN}`,
@@ -206,7 +210,7 @@ async function docPage(raw: string, env: Env, prefix: string): Promise<Response>
   if (!p) return new Response("Not found", { status: 404 });
 
   const gen = await generation(env);
-  const key = `doc:${gen}:${prefix || "root"}:${p}`;
+  const key = `doc:${CACHE_V}:${gen}:${prefix || "root"}:${p}`;
   const hit = await env.DOCS_CACHE.get(key);
   if (hit) return html(hit);
 
@@ -217,7 +221,7 @@ async function docPage(raw: string, env: Env, prefix: string): Promise<Response>
 
   if (r.status === 404) return dirListing(p, env, key, prefix); // maybe a directory
   if (!r.ok) {
-    const stale = await env.DOCS_CACHE.get(`doc:stale:${prefix || "root"}:${p}`);
+    const stale = await env.DOCS_CACHE.get(`doc:stale:${CACHE_V}:${prefix || "root"}:${p}`);
     if (stale) return html(stale); // GitHub hiccup: serve last-known-good
     return new Response("Docs temporarily unavailable", { status: 503 });
   }
@@ -227,7 +231,7 @@ async function docPage(raw: string, env: Env, prefix: string): Promise<Response>
   const page = shell(docTitle(md, p), `<article>${body}</article>${prevNext(p, prefix)}`, p, prefix, true);
 
   await env.DOCS_CACHE.put(key, page, { expirationTtl: DOC_TTL });
-  await env.DOCS_CACHE.put(`doc:stale:${prefix || "root"}:${p}`, page); // no TTL: outage fallback
+  await env.DOCS_CACHE.put(`doc:stale:${CACHE_V}:${prefix || "root"}:${p}`, page); // no TTL: outage fallback
   return html(page);
 }
 
@@ -284,7 +288,7 @@ type IndexDoc = { r: string; t: string; h: string[]; x: string };
 type SearchIdx = { status: "building" | "complete"; done: number; docs: IndexDoc[] };
 
 async function docPaths(env: Env, gen: string): Promise<string[]> {
-  const key = `paths:${gen}`;
+  const key = `paths:${CACHE_V}:${gen}`;
   const hit = await env.DOCS_CACHE.get(key);
   if (hit) return JSON.parse(hit) as string[];
 
@@ -308,7 +312,7 @@ async function docPaths(env: Env, gen: string): Promise<string[]> {
 
 async function searchIndex(env: Env): Promise<Response> {
   const gen = await generation(env);
-  const key = `searchidx:${gen}`;
+  const key = `searchidx:${CACHE_V}:${gen}`;
   const raw = await env.DOCS_CACHE.get(key);
   let idx: SearchIdx = raw ? (JSON.parse(raw) as SearchIdx) : { status: "building", done: 0, docs: [] };
   if (idx.status === "complete") return json(idx);
