@@ -405,10 +405,26 @@
     </div>
   </section>
 
+  <!-- ANSWERS -->
+  <section class="band" id="answers">
+    <div class="wrap">
+      <div class="sechead io"><span class="secno">02 / ANSWERS</span></div>
+      <h2 class="io">Built for the questions you ask at 2 a.m.</h2>
+      <div class="badges io" style="grid-template-columns:1fr 1fr;margin-top:38px">
+        <div class="badge"><div class="bt" style="text-transform:none;letter-spacing:.01em">“Berlin says the app is slow — network, path, or server?”</div><div class="bd">Synthetic probes, ECMP/MPLS-aware path discovery, and flow analytics show <strong>where</strong> the latency lives, not just that it exists.</div></div>
+        <div class="badge"><div class="bt" style="text-transform:none;letter-spacing:.01em">“Did the 14:03 deploy cause this?”</div><div class="bd">Change intelligence pulls deploy/config events from GitHub, GitLab, CI and IaC, and correlates them with the symptoms that followed.</div></div>
+        <div class="badge"><div class="bt" style="text-transform:none;letter-spacing:.01em">“Why did this prefix go dark — us, or the internet?”</div><div class="bd">BGP intelligence from RouteViews/RIPE RIS, RPKI validity, and a collective outage view separate a you-problem from an everyone-problem.</div></div>
+        <div class="badge"><div class="bt" style="text-transform:none;letter-spacing:.01em">“What breaks if I drain this node?”</div><div class="bd">The topology <strong>what-if</strong> simulates the blast radius on the live dependency graph — before you touch production.</div></div>
+        <div class="badge"><div class="bt" style="text-transform:none;letter-spacing:.01em">“Who's saturating this link, and what does it cost?”</div><div class="bd">Flow top-talkers plus per-tenant FinOps egress attribution — capacity and dollars in the same view.</div></div>
+        <div class="badge"><div class="bt" style="text-transform:none;letter-spacing:.01em">“…or just ask it.”</div><div class="bd">The assistant answers in plain language with <strong>cited evidence</strong>, scoped to what you're allowed to see — and an MCP server hands the same map to your own AI tools.</div></div>
+      </div>
+    </div>
+  </section>
+
   <!-- CORRELATION -->
   <section class="band" id="correlate">
     <div class="wrap">
-      <div class="sechead io"><span class="secno">02 / CORRELATION</span></div>
+      <div class="sechead io"><span class="secno">03 / CORRELATION</span></div>
       <div class="two">
         <div class="io">
           <h2>From signal to cause.</h2>
@@ -421,7 +437,7 @@
           </div>
         </div>
         <div class="log io">
-          <div class="bar"><span>OBSERVATION LOG · incident 4471</span><span class="live"><i></i>LIVE</span></div>
+          <div class="bar"><span>OBSERVATION LOG · incident 4471</span><span class="live"><i></i>SAMPLE</span></div>
           <div class="body">
 <div><span class="ts">14:01:48Z</span> <span class="hl">api-gateway p99 latency +6.2×</span></div>
 <div><span class="ts">14:02:11Z</span> <span class="am">⤷ bgp</span> origin change observed, AS64500</div>
@@ -441,7 +457,7 @@
   <section class="band peri" id="perimeter">
     <div class="wrap peri-grid">
       <div class="io">
-        <div class="sechead"><span class="secno">03 / PERIMETER</span></div>
+        <div class="sechead"><span class="secno">04 / PERIMETER</span></div>
         <h2>The map never leaves the room.</h2>
         <p class="lead" style="margin-top:1.2rem">probectl is self-hosted by design. Your telemetry stays inside your perimeter — no phone-home, ever, right down to license checks, which are offline math. Point the AI at a local model and the whole observatory runs air-gapped.</p>
       </div>
@@ -457,7 +473,7 @@
   <!-- DEPLOY -->
   <section class="band" id="deploy">
     <div class="wrap">
-      <div class="sechead io"><span class="secno">04 / DEPLOY</span></div>
+      <div class="sechead io"><span class="secno">05 / DEPLOY</span></div>
       <div class="two">
         <div class="term io">
           <div class="bar"><span class="d"></span><span class="d"></span><span class="d a"></span><span class="t">~ / first data in one command</span></div>
@@ -483,6 +499,22 @@
             <span class="tag">OpenTelemetry / OTLP</span>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST & PROVIDERS -->
+  <section class="band" id="trust">
+    <div class="wrap">
+      <div class="sechead io"><span class="secno">06 / TRUST</span></div>
+      <h2 class="io">Built like infrastructure, not a demo.</h2>
+      <div class="badges io" style="grid-template-columns:repeat(3,1fr);margin-top:38px">
+        <div class="badge"><div class="bt">Signed releases</div><div class="bd">Every artifact is keyless-signed (cosign) and self-verified in the release pipeline — check the signature before you run anything.</div></div>
+        <div class="badge"><div class="bt">SBOM + provenance</div><div class="bd">Images ship with an SPDX SBOM and SLSA build provenance; every dependency is version-pinned by policy.</div></div>
+        <div class="badge"><div class="bt">Isolation, gated in CI</div><div class="bd">A cross-tenant isolation suite runs on every change — a query crossing a tenant line fails the build, not the customer.</div></div>
+        <div class="badge"><div class="bt">Multi-tenant to resell</div><div class="bd">Pooled, siloed, or hybrid isolation per tenant; white-label theming and per-tenant metering for MSPs.</div></div>
+        <div class="badge"><div class="bt">No silent access</div><div class="bd">Provider operators get zero implicit access to tenant telemetry — break-glass is explicit, time-bounded, and separately audited.</div></div>
+        <div class="badge"><div class="bt">Accessible by gate</div><div class="bd">The UI holds a WCAG 2.2 AA baseline enforced by CI — keyboard-first, with a command palette.</div></div>
       </div>
     </div>
   </section>

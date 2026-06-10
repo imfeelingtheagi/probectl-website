@@ -30,7 +30,7 @@ const DOCS_HOST = "docs.probectl.com";
 // Bump whenever shell()/rendering changes shape: it versions every cache key,
 // so a deploy instantly stops serving pages rendered by older code (no
 // reliance on KV `gen` propagation for layout changes).
-const CACHE_V = "v2";
+const CACHE_V = "v3";
 
 const ghHeaders = (env: Env): Record<string, string> => ({
   Authorization: `Bearer ${env.GITHUB_TOKEN}`,
@@ -170,6 +170,11 @@ export default {
       const p = path.replace(/^\/+/, "").replace(/\/+$/, "");
       if (p === "docs-theme.css" || p === "fonts.css" || p.startsWith("fonts/"))
         return env.ASSETS.fetch(req);
+      if (p === "robots.txt")
+        return new Response(`User-agent: *\nAllow: /\n\nSitemap: https://${DOCS_HOST}/sitemap.xml\n`, {
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        });
+      if (p === "sitemap.xml") return sitemap();
       if (p === "") return docsHome(env, "");
       if (p === "docs" || p.startsWith("docs/")) {
         const rest = p === "docs" ? "" : p.slice("docs/".length);
@@ -188,9 +193,31 @@ export default {
       return docPage(path.slice("/docs/".length), env, "/docs");
     }
 
-    return env.ASSETS.fetch(req); // the static landing page
+    // The landing page itself ("/" is worker-first): add security headers.
+    if (path === "/" || path === "/index.html") {
+      const res = await env.ASSETS.fetch(req);
+      const h = new Headers(res.headers);
+      h.set(
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+      );
+      h.set("Referrer-Policy", "strict-origin-when-cross-origin");
+      h.set("X-Frame-Options", "DENY");
+      return new Response(res.body, { status: res.status, headers: h });
+    }
+    return env.ASSETS.fetch(req); // other static assets
   },
 } satisfies ExportedHandler<Env>;
+
+function sitemap(): Response {
+  const urls = ["", ...NAV_FLAT.map((n) => n.route)]
+    .map((r) => `<url><loc>https://${DOCS_HOST}/${r}</loc></url>`)
+    .join("");
+  return new Response(
+    `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`,
+    { headers: { "Content-Type": "application/xml; charset=utf-8" } },
+  );
+}
 
 // ---------------------------------------------------------------- docs ----
 
@@ -207,7 +234,7 @@ const generation = async (env: Env): Promise<string> =>
 // local dev / preview. It shapes every generated link and the cache key.
 async function docPage(raw: string, env: Env, prefix: string): Promise<Response> {
   const p = safePath(raw);
-  if (!p) return new Response("Not found", { status: 404 });
+  if (!p) return notFound(prefix);
 
   const gen = await generation(env);
   const key = `doc:${CACHE_V}:${gen}:${prefix || "root"}:${p}`;
@@ -260,7 +287,7 @@ async function dirListing(dir: string, env: Env, cacheKey: string, prefix: strin
   const r = await fetch(`${API}/repos/${REPO}/contents/docs/${dir}?ref=${BRANCH}`, {
     headers: { ...ghHeaders(env), Accept: "application/vnd.github+json" },
   });
-  if (r.status === 404) return new Response("No such doc", { status: 404 });
+  if (r.status === 404) return notFound(prefix);
   if (!r.ok) return new Response("Docs temporarily unavailable", { status: 503 });
 
   const entries = (await r.json()) as Array<{ type: string; path: string; name: string }>;
@@ -343,8 +370,10 @@ async function searchIndex(env: Env): Promise<Response> {
 }
 
 export function mdToIndexDoc(route: string, md: string): IndexDoc {
-  const noCode = md.replace(/```[\s\S]*?```/g, " ");
-  const t = (noCode.match(/^#\s+(.+)$/m)?.[1] ?? route).replace(/[*_`#]/g, "").trim();
+  // strip code fences AND raw HTML blocks (the README uses them) from the index
+  const noCode = md.replace(/```[\s\S]*?```/g, " ").replace(/<[^>]*>/g, " ");
+  const fallback = route === "readme" ? "Overview (README)" : route;
+  const t = (noCode.match(/^#\s+(.+)$/m)?.[1] ?? fallback).replace(/[*_`#]/g, "").trim();
   const h = [...noCode.matchAll(/^#{2,3}\s+(.+)$/gm)]
     .map((m) => m[1].replace(/[*_`#]/g, "").trim())
     .slice(0, 24);
@@ -424,14 +453,26 @@ function sidebar(route: string, prefix: string): string {
   }).join("\n");
 }
 
-function html(body: string): Response {
+function html(body: string, status = 200): Response {
   return new Response(body, {
+    status,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "public, max-age=300",
+      "Cache-Control": status === 200 ? "public, max-age=300" : "no-store",
       "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "X-Frame-Options": "DENY",
+      "Content-Security-Policy":
+        "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
     },
   });
+}
+
+function notFound(prefix: string): Response {
+  const body = `<article><h1>That page doesn't exist</h1>
+<p>No doc lives at this address. It may have moved when the docs were reorganized.</p>
+<p>Try the <a href="${prefix || "/"}">documentation index</a>, or press <kbd>⌘K</kbd> and search for it.</p></article>`;
+  return html(shell("Not found", body, "", prefix, false), 404);
 }
 
 // Full docs layout: header (brand, search, GitHub) · sidebar · article · TOC.
@@ -472,7 +513,7 @@ m.initialize({ startOnLoad: true, theme: "dark", securityLevel: "strict" });
 <div class="layout">
   <nav class="side" aria-label="Documentation">${sidebar(route, prefix)}</nav>
   <main>${body}
-  <footer>Rendered live from <code>github.com/${REPO}</code> — found a mistake? <a href="https://github.com/${REPO}/edit/${BRANCH}/${route === "readme" ? "README.md" : `docs/${route}.md`}" rel="noopener">edit this page</a>.</footer>
+  <footer>Rendered live from <code>github.com/${REPO}</code>${withToc ? ` — found a mistake? <a href="https://github.com/${REPO}/edit/${BRANCH}/${route === "readme" ? "README.md" : `docs/${route}.md`}" rel="noopener">edit this page</a>` : ""}.</footer>
   </main>
   ${withToc ? `<aside class="toc" aria-label="On this page"><div class="toc-title">On this page</div><ul id="tocList"></ul></aside>` : ""}
 </div>
