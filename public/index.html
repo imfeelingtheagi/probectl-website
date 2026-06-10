@@ -26,13 +26,11 @@
 <meta name="twitter:description" content="Self-hosted network observability. Five planes of signal on one live map. No phone-home, ever.">
 <meta name="twitter:image" content="https://probectl.com/og-cover.png">
 
-<!-- Webfonts load progressively (non-render-blocking) with a print->all swap; the fallback stacks
-     below keep the page fully functional offline if the fonts never load.
-     LAUNCH TASK: self-host these (third-party calls are off-brand here) — see fonts/README.md. -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Sora:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Sora:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap"></noscript>
+<!-- Webfonts are SELF-HOSTED (latin woff2, SIL OFL — see /fonts). Zero third-party
+     requests; font-display:swap + the fallback stacks keep text visible instantly. -->
+<link rel="preload" href="/fonts/syne-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/sora-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/fonts.css">
 
 <script type="application/ld+json">
 {

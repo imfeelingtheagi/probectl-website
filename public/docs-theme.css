@@ -1,4 +1,6 @@
 /* probectl docs — dark theme matching the landing page tokens */
+@import url('/fonts.css');
+
 :root {
   --bg: #0a1024; --panel: #101840; --panel2: #080d22;
   --line: #212a57; --line2: #2f3a78;

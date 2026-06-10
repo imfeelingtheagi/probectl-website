@@ -1,0 +1,22 @@
+/* Self-hosted webfonts (latin subsets, woff2 only — 156 KB total).
+   Sources: @fontsource/{syne,sora,dm-mono}; all SIL OFL 1.1 (licenses in /fonts).
+   No third-party font requests leave the visitor's browser. */
+
+@font-face { font-family: 'Syne'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('/fonts/syne-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Syne'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('/fonts/syne-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Syne'; font-style: normal; font-weight: 800; font-display: swap;
+  src: url('/fonts/syne-latin-800-normal.woff2') format('woff2'); }
+
+@font-face { font-family: 'Sora'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('/fonts/sora-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Sora'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('/fonts/sora-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Sora'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('/fonts/sora-latin-600-normal.woff2') format('woff2'); }
+
+@font-face { font-family: 'DM Mono'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('/fonts/dm-mono-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'DM Mono'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('/fonts/dm-mono-latin-500-normal.woff2') format('woff2'); }
