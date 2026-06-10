@@ -9,13 +9,15 @@ content, only the renderer.
 
 - `public/` — the landing page, served as static assets at the Cloudflare
   edge (the Worker is not invoked for these requests).
-- `src/index.ts` — a Cloudflare Worker that runs only on `/docs*`, `/api/*`,
-  and `/webhooks/*`:
-  - `/docs/<path>` fetches `docs/<path>.md` from the probectl repo via the
-    GitHub Contents API (read-only fine-grained PAT), renders it
-    (marked + GFM heading ids, mermaid client-side), rewrites `*.md`
-    cross-links to site routes, and caches the HTML in Workers KV.
-    `/docs/readme` serves the repo README; directory paths render listings.
+- `src/index.ts` — a Cloudflare Worker serving the dynamic routes:
+  - **Docs live at `docs.probectl.com/<path>`** (canonical): the Worker
+    fetches `docs/<path>.md` from the probectl repo via the GitHub Contents
+    API (read-only fine-grained PAT), renders it (marked + GFM heading ids,
+    mermaid client-side), rewrites `*.md` cross-links to site routes, and
+    caches the HTML in Workers KV. `/readme` serves the repo README;
+    directory paths render listings. `probectl.com/docs/*` 301-redirects to
+    the subdomain; on localhost/previews the docs render at `/docs/*` so
+    `wrangler dev` works without the host.
   - `/webhooks/github` — HMAC-verified push webhook from the probectl repo;
     a push touching `docs/**` or `README.md` bumps the cache generation, so
     published docs update seconds after a push.
@@ -39,8 +41,9 @@ npm run check                    # typecheck
    `wrangler.jsonc`.
 2. `npx wrangler secret put GITHUB_TOKEN` and
    `npx wrangler secret put WEBHOOK_SECRET`.
-3. `npm run deploy` — the `routes` block attaches `probectl.com` +
-   `www.probectl.com` (zone must be active on the Cloudflare account).
+3. `npm run deploy` — the `routes` block attaches `probectl.com`,
+   `www.probectl.com`, and `docs.probectl.com` (zone must be active on the
+   Cloudflare account; the hostnames must have no conflicting DNS records).
 4. Add the push webhook on the probectl repo →
    `https://probectl.com/webhooks/github`, content type `application/json`,
    the same secret, "Just the push event".

@@ -10,7 +10,9 @@
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
-    "run_worker_first": ["/docs", "/docs/*", "/api/*", "/webhooks/*"]
+    // "/" is Worker-first so docs.probectl.com/ can render the docs index
+    // (the apex homepage just falls through to assets — one cheap hop).
+    "run_worker_first": ["/", "/docs", "/docs/*", "/api/*", "/webhooks/*"]
   },
 
   // Created with: npx wrangler kv namespace create DOCS_CACHE
@@ -23,7 +25,8 @@
   // probectl.com zone automatically at deploy time.
   "routes": [
     { "pattern": "probectl.com", "custom_domain": true },
-    { "pattern": "www.probectl.com", "custom_domain": true }
+    { "pattern": "www.probectl.com", "custom_domain": true },
+    { "pattern": "docs.probectl.com", "custom_domain": true }
   ]
 
   // Secrets (NOT stored here — set with `npx wrangler secret put <KEY>`,

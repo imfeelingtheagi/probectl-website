@@ -34,15 +34,45 @@ const ghHeaders = (env: Env): Record<string, string> => ({
   "User-Agent": "probectl-website",
 });
 
+// Canonical docs home is the SUBDOMAIN: docs.probectl.com/<route>.
+// probectl.com/docs/* permanently redirects there; on localhost/workers.dev
+// (no docs host) the /docs/* paths render in place so `wrangler dev` works.
+const DOCS_HOST = "docs.probectl.com";
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     const path = url.pathname;
+    const host = url.hostname;
+    const isDocsHost = host === DOCS_HOST || host.startsWith("docs.");
+    const isProdApex = host === "probectl.com" || host === "www.probectl.com";
 
     if (path === "/webhooks/github" && req.method === "POST") return webhook(req, env);
     if (path === "/api/access" && req.method === "POST") return accessForm(req, env);
-    if (path === "/docs" || path === "/docs/") return docsIndex(env);
-    if (path.startsWith("/docs/")) return docPage(path.slice("/docs/".length), env);
+
+    if (isDocsHost) {
+      const p = path.replace(/^\/+/, "").replace(/\/+$/, "");
+      // shell assets resolve on this host too
+      if (p === "docs-theme.css" || p === "fonts.css" || p.startsWith("fonts/"))
+        return env.ASSETS.fetch(req);
+      if (p === "") return docsIndex(env, "");
+      if (p === "docs" || p.startsWith("docs/")) {
+        // a copied probectl.com/docs/... path pasted onto this host
+        const rest = p === "docs" ? "" : p.slice("docs/".length);
+        return Response.redirect(`https://${DOCS_HOST}/${rest}${url.search}`, 301);
+      }
+      return docPage(p, env, "");
+    }
+
+    if (path === "/docs" || path === "/docs/") {
+      if (isProdApex) return Response.redirect(`https://${DOCS_HOST}/`, 301);
+      return docsIndex(env, "/docs"); // local dev / workers.dev preview
+    }
+    if (path.startsWith("/docs/")) {
+      if (isProdApex)
+        return Response.redirect(`https://${DOCS_HOST}${path.slice("/docs".length)}${url.search}`, 301);
+      return docPage(path.slice("/docs/".length), env, "/docs");
+    }
 
     // Anything else that reached the Worker: defer to static assets.
     return env.ASSETS.fetch(req);
@@ -60,12 +90,14 @@ function safePath(raw: string): string | null {
 const generation = async (env: Env): Promise<string> =>
   (await env.DOCS_CACHE.get("gen")) ?? "0";
 
-async function docPage(raw: string, env: Env): Promise<Response> {
+// `prefix` is "" on docs.probectl.com (routes at the root) and "/docs" in
+// local dev / preview. It shapes every generated link and the cache key.
+async function docPage(raw: string, env: Env, prefix: string): Promise<Response> {
   const p = safePath(raw);
   if (!p) return new Response("Not found", { status: 404 });
 
   const gen = await generation(env);
-  const key = `doc:${gen}:${p}`;
+  const key = `doc:${gen}:${prefix || "root"}:${p}`;
   const hit = await env.DOCS_CACHE.get(key);
   if (hit) return html(hit);
 
@@ -74,29 +106,29 @@ async function docPage(raw: string, env: Env): Promise<Response> {
     headers: { ...ghHeaders(env), Accept: "application/vnd.github.raw+json" },
   });
 
-  if (r.status === 404) return dirListing(p, env, key); // maybe a directory
+  if (r.status === 404) return dirListing(p, env, key, prefix); // maybe a directory
   if (!r.ok) {
-    const stale = await env.DOCS_CACHE.get(`doc:stale:${p}`);
+    const stale = await env.DOCS_CACHE.get(`doc:stale:${prefix || "root"}:${p}`);
     if (stale) return html(stale); // GitHub hiccup: serve last-known-good
     return new Response("Docs temporarily unavailable", { status: 503 });
   }
 
   const md = await r.text();
-  const body = rewriteLinks(String(marked.parse(md)), p);
-  const page = shell(docTitle(md, p), body, `/docs/${p}`);
+  const body = rewriteLinks(String(marked.parse(md)), p, prefix);
+  const page = shell(docTitle(md, p), body, p, prefix);
 
   await env.DOCS_CACHE.put(key, page, { expirationTtl: DOC_TTL });
-  await env.DOCS_CACHE.put(`doc:stale:${p}`, page); // no TTL: outage fallback
+  await env.DOCS_CACHE.put(`doc:stale:${prefix || "root"}:${p}`, page); // no TTL: outage fallback
   return html(page);
 }
 
-async function docsIndex(env: Env): Promise<Response> {
-  return dirListing("", env, `doc:${await generation(env)}:__index`);
+async function docsIndex(env: Env, prefix: string): Promise<Response> {
+  return dirListing("", env, `doc:${await generation(env)}:${prefix || "root"}:__index`, prefix);
 }
 
 // Renders a listing for docs/<dir> (the Contents API returns an array for
-// directories). Also serves /docs itself (dir = "").
-async function dirListing(dir: string, env: Env, cacheKey: string): Promise<Response> {
+// directories). Also serves the docs index (dir = "").
+async function dirListing(dir: string, env: Env, cacheKey: string, prefix: string): Promise<Response> {
   const hit = await env.DOCS_CACHE.get(cacheKey);
   if (hit) return html(hit);
 
@@ -112,16 +144,16 @@ async function dirListing(dir: string, env: Env, cacheKey: string): Promise<Resp
     .map((e) => {
       const route = e.path.replace(/^docs\//, "").replace(/\.md$/, "");
       return e.type === "dir"
-        ? `<li class="dir"><a href="/docs/${route}">${e.name}/</a></li>`
-        : `<li><a href="/docs/${route}">${e.name.replace(/\.md$/, "")}</a></li>`;
+        ? `<li class="dir"><a href="${prefix}/${route}">${e.name}/</a></li>`
+        : `<li><a href="${prefix}/${route}">${e.name.replace(/\.md$/, "")}</a></li>`;
     })
     .join("\n");
 
   const heading = dir ? `docs/${dir}` : "Documentation";
   const intro = dir
-    ? `<p><a href="/docs">← all docs</a></p>`
-    : `<p>Live from the <a href="https://github.com/${REPO}">probectl repo</a> — start with the <a href="/docs/readme">README</a> or <a href="/docs/getting-started">getting started</a>.</p>`;
-  const page = shell(heading, `<h1>${heading}</h1>${intro}<ul class="index">${items}</ul>`, `/docs${dir ? `/${dir}` : ""}`);
+    ? `<p><a href="${prefix || "/"}">← all docs</a></p>`
+    : `<p>Live from the <a href="https://github.com/${REPO}">probectl repo</a> — start with the <a href="${prefix}/readme">README</a> or <a href="${prefix}/getting-started">getting started</a>.</p>`;
+  const page = shell(heading, `<h1>${heading}</h1>${intro}<ul class="index">${items}</ul>`, dir, prefix);
 
   await env.DOCS_CACHE.put(cacheKey, page, { expirationTtl: DOC_TTL });
   return html(page);
@@ -132,7 +164,7 @@ async function dirListing(dir: string, env: Env, cacheKey: string): Promise<Resp
 // "agent/enrollment", ...). Links are resolved repo-relative: targets under
 // docs/ become /docs/* routes, the root README becomes /docs/readme, and
 // other repo files (CONTRIBUTING.md, SECURITY.md, ...) link to GitHub.
-export function rewriteLinks(h: string, fromRoute: string): string {
+export function rewriteLinks(h: string, fromRoute: string, prefix: string): string {
   const repoDir =
     fromRoute === "readme"
       ? "" // README lives at the repo root
@@ -155,9 +187,9 @@ export function rewriteLinks(h: string, fromRoute: string): string {
 
     const target = [...segs.slice(0, segs.length - up), p].join("/");
     const a = anchor ? `#${anchor}` : "";
-    if (/^readme\.md$/i.test(target)) return `href="/docs/readme${a}"`;
+    if (/^readme\.md$/i.test(target)) return `href="${prefix}/readme${a}"`;
     if (target.startsWith("docs/"))
-      return `href="/docs/${target.slice(5).replace(/\.md$/, "")}${a}"`;
+      return `href="${prefix}/${target.slice(5).replace(/\.md$/, "")}${a}"`;
     return `href="https://github.com/${REPO}/blob/${BRANCH}/${target}${a}"`;
   });
 }
@@ -178,8 +210,11 @@ function html(body: string): Response {
 }
 
 // Page shell. mermaid loads only when the page contains a mermaid block
-// (e.g. /docs/architecture); everything else ships zero JS.
-function shell(title: string, body: string, canonicalPath: string): string {
+// (e.g. /architecture); everything else ships zero JS.
+// `route` is the doc route ("getting-started", "" for the index); the
+// canonical URL always points at the production docs host.
+function shell(title: string, body: string, route: string, prefix: string): string {
+  const canonical = `https://${DOCS_HOST}/${route}`;
   const mermaid = body.includes('class="language-mermaid"')
     ? `<script type="module">
 import m from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
@@ -197,13 +232,13 @@ m.initialize({ startOnLoad: true, theme: "dark", securityLevel: "strict" });
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title} · probectl docs</title>
-<link rel="canonical" href="https://probectl.com${canonicalPath}">
+<link rel="canonical" href="${canonical}">
 <meta name="theme-color" content="#0a1024">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Crect width='20' height='20' rx='4' fill='%230a1024'/%3E%3Ccircle cx='10' cy='10' r='7' fill='none' stroke='%23ffb454' stroke-width='1.4'/%3E%3Ccircle cx='10' cy='10' r='2.6' fill='none' stroke='%23ffb454' stroke-width='1.4'/%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%23ffb454'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/docs-theme.css">
 </head>
 <body class="docs">
-<nav class="crumbs"><a href="/">probectl</a><span>/</span><a href="/docs">docs</a><a class="gh" href="https://github.com/${REPO}" rel="noopener">GitHub ↗</a></nav>
+<nav class="crumbs"><a href="https://probectl.com/">probectl</a><span>/</span><a href="${prefix || "/"}">docs</a><a class="gh" href="https://github.com/${REPO}" rel="noopener">GitHub ↗</a></nav>
 <main>${body}</main>
 <footer>Rendered live from <code>github.com/${REPO}</code> · <a href="/">probectl.com</a></footer>
 ${mermaid}
